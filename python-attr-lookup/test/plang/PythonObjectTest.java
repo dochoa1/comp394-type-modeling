@@ -84,7 +84,6 @@ class PythonObjectTest {
     @Test
     void exceptionWhenAttrNotFound() throws Exception {
         bar.set("flavor", new PythonString("ineffable"));
-
         PythonAttributeException error = assertThrows(
             PythonAttributeException.class,
             () -> {
