@@ -126,8 +126,8 @@ def check_args(expected_types, actual_types, call_name):
                                 .format(call_name, names(expected_types), names([arg.static_type() for arg in actual_types])))
 
 def is_primitive(type):
-    """ Helper for determining if a given type is a primative """
-    if len(type.direct_supertypes) == 0:
+    """ Helper for determining if a given type is a primitive """
+    if type.__class__.__name__ != "ClassOrInterface":
         return True
     return False
 

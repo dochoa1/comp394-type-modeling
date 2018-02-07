@@ -38,6 +38,9 @@ class PythonObjectTest {
     @Test
     void canCreateAndInstantiateTypes() {
         // do nothing; we’re just making sure the @BeforeEach block above succeeded
+        assertSame(fooType, foo.getType());
+        assertSame(barType, bar.getType());
+        assertNotSame(foo, bar);
     }
 
     // –––––– MRO tests ––––––
