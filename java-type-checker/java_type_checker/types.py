@@ -81,7 +81,7 @@ class NullType(Type):
         super().__init__("null")
 
     def is_subtype_of(self, other):
-        return True
+        return isinstance(other, ClassOrInterface)
 
     def method_named(self, name):
         raise NoSuchMethod("Cannot invoke method {}() on null".format(name))
