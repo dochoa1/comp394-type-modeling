@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ # -*- coding: utf-8 -*-
 
 from java_type_checker import *
 from tests.fixtures import Graphics

@@ -31,6 +31,12 @@ class Variable(Expression):
         self.name = name                    #: The name of the variable
         self.declared_type = declared_type  #: The declared type of the variable (Type)
 
+    def static_type(self):
+        return self.declared_type
+
+    def check_types(self):
+        pass
+
 
 class Literal(Expression):
     """ A literal value entered in the code, e.g. `5` in the expression `x + 5`.
@@ -39,10 +45,22 @@ class Literal(Expression):
         self.value = value  #: The literal value, as a string
         self.type = type    #: The type of the literal (Type)
 
+    def static_type(self):
+        return self.type
+
+    def check_types(self):
+        pass
+
 
 class NullLiteral(Literal):
     def __init__(self):
         super().__init__("null", Type.null)
+
+    def static_type(self):
+        return Type.null
+
+    def check_types(self):
+        pass
 
 
 class MethodCall(Expression):
@@ -50,10 +68,30 @@ class MethodCall(Expression):
     A Java method invocation, i.e. `foo.bar(0, 1, 2)`.
     """
     def __init__(self, receiver, method_name, *args):
-        self.receiver = receiver
         self.receiver = receiver        #: The object whose method we are calling (Expression)
         self.method_name = method_name  #: The name of the method to call (String)
         self.args = args                #: The method arguments (list of Expressions)
+
+    def static_type(self):
+        return self.receiver.declared_type.method_named(self.method_name).return_type
+
+    def check_types(self):
+        if len(self.receiver.static_type().direct_supertypes) == 0 and self.receiver.static_type() != Type.null:  # if no direct supertypes then primitive
+                raise JavaTypeError("Type {} does not have methods".format(self.receiver.static_type().name))
+
+        expected_types =  self.receiver.static_type().method_named(self.method_name).argument_types  # raises NoSuchMethod if method doesn't exist
+        actual_types = self.args
+        call_name = "{}.{}()".format(self.receiver.static_type().name, self.method_name)
+
+        if len(actual_types) != len(expected_types):
+            raise JavaTypeError("Wrong number of arguments for {0}: expected {1}, got {2}"
+                                .format(call_name, len(expected_types), len(actual_types)))
+        else:  # if argument nums check then check types
+            for arg_pair in zip(actual_types, expected_types):
+                if not arg_pair[0].static_type().is_subtype_of(arg_pair[1]):
+                    raise JavaTypeError("{0} expects arguments of type {1}, but got {2}"
+                                        .format(call_name, names(expected_types), names([arg.static_type() for arg in actual_types])))
+                arg_pair[0].check_types()
 
 
 class ConstructorCall(Expression):
@@ -63,6 +101,30 @@ class ConstructorCall(Expression):
     def __init__(self, instantiated_type, *args):
         self.instantiated_type = instantiated_type  #: The type to instantiate (Type)
         self.args = args                            #: Constructor arguments (list of Expressions)
+
+    def static_type(self):
+        return self.instantiated_type
+
+    def check_types(self):
+        if len(self.static_type().direct_supertypes) == 0:  # if no direct supertypes then primitive
+            raise JavaTypeError("Type {} is not instantiable".format(self.static_type().name))
+
+        call_name = self.instantiated_type.name
+        expected_types = self.instantiated_type.constructor.argument_types
+        actual_types = self.args
+
+        if len(actual_types) != len(expected_types):
+            raise JavaTypeError("Wrong number of arguments for {0} constructor: expected {1}, got {2}"
+                                .format(call_name, len(expected_types), len(actual_types)))
+        else:  # if argument nums check then check types
+            for arg_pair in zip(actual_types, expected_types):
+                arg_pair[0].check_types()
+                if not arg_pair[0].static_type().is_subtype_of(arg_pair[1]):
+                    raise JavaTypeError("{0} constructor expects arguments of type {1}, but got {2}"
+                                        .format(call_name, names(expected_types), names([arg.static_type() for arg in actual_types])))
+                if arg_pair[0].static_type() == Type.null and len(arg_pair[1].direct_supertypes) == 0:  # swapping null and primative
+                    raise JavaTypeError("{0} constructor expects arguments of type {1}, but got {2}"
+                                        .format(call_name, names(expected_types), names([arg.static_type() for arg in actual_types])))
 
 
 class JavaTypeError(Exception):
